@@ -3,12 +3,12 @@ Embedded domain-specific library for implicitly and explicitly encoding
 functions as matrices that operate on domains of one-hot vectors.
 """
 from __future__ import annotations
-from typing import Iterable
+from typing import Any, Union, Iterable, Callable
 import doctest
 import inspect
 import functools
 
-def _dot(xs: Iterable, ys: Iterable):
+def _dot(xs: Iterable, ys: Iterable) -> Any:
     """
     Return the dot product of two iterables.
 
@@ -27,11 +27,11 @@ class onehot:
     >>> list(v)
     [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
     """
-    def __init__(self, index: int, size: int):
+    def __init__(self: onehot, index: int, size: int):
         self.index = index
         self.size = size
 
-    def __iter__(self):
+    def __iter__(self: onehot) -> Iterable[int]:
         """
         Yield the individual entries of the one-hot vector that this instance
         represents.
@@ -42,7 +42,7 @@ class onehot:
         for i in range(self.size):
             yield 1 if i == self.index else 0
 
-    def __int__(self):
+    def __int__(self: onehot):
         """
         Return the index of the sole `1` entry in the one-hot vector
         that this instance represents.
@@ -61,21 +61,17 @@ class domain:
     >>> len(a)
     3
     """
-    def __init__(self, *arguments):
-        self.components = []
-        self.inverses = []
-        if len(arguments) == 1:
-            xs = arguments[0]
-            self.components.append(xs)
-            self.inverses.append({x: i for (i, x) in enumerate(xs)})
+    def __init__(self: domain, iterable: Iterable):
+        self.components = [iterable]
+        self.inverses = [{x: i for (i, x) in enumerate(iterable)}]
 
-    def __len__(self):
+    def __len__(self: domain) -> int:
         size = 1
         for component in self.components:
             size *= len(component)
         return size
 
-    def __mul__(self, other):
+    def __mul__(self: domain, other: domain) -> domain:
         """
         Combine two domains using the Cartesian product operation. This
         operation is associative.
@@ -86,12 +82,12 @@ class domain:
         >>> len(c)
         12
         """
-        d = domain()
+        d = domain([])
         d.components = self.components + other.components
         d.inverses = self.inverses + other.inverses
         return d
 
-    def __getitem__(self, index):
+    def __getitem__(self: domain, index: Union[int, onehot]) -> Any:
         """
         Retrieve a value in the domain using its index (*i.e.*, the index of
         the sole `1` entry in the one-hot vector that represents the value).
@@ -114,7 +110,7 @@ class domain:
         components = tuple(reversed(components))
         return components[0] if len(self.components) == 1 else components
 
-    def __call__(self, value) -> onehot:
+    def __call__(self: domain, value: Any) -> onehot:
         """
         Retrieve the one-hot vector that represents the specified value in this
         domain.
@@ -167,22 +163,24 @@ class matrix:
     """
     def __init__(
             self: matrix,
-            function,
-            domain = None, # pylint: disable=redefined-outer-name
-            codomain = None
+            function: Callable,
+            domain: domain = None, # pylint: disable=redefined-outer-name
+            codomain: domain = None
         ):
         self.function = function
-        
+
         if domain is None:
             signature = inspect.signature(self.function)
             parameters = signature.parameters
             domains = []
             for parameter in parameters:
+                # pylint: disable=eval-used
                 domains.append(eval(parameters[parameter].annotation))
             domain = functools.reduce((lambda a, b: a * b), domains)
         self.domain = domain
 
         if codomain is None:
+            # pylint: disable=eval-used
             codomain = eval(signature.return_annotation)
         self.codomain = codomain
 
