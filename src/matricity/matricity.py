@@ -31,6 +31,16 @@ class onehot:
         self.index = index
         self.size = size
 
+    def __int__(self: onehot):
+        """
+        Return the index of the sole `1` entry in the one-hot vector
+        that this instance represents.
+
+        >>> int(onehot(3, 4))
+        3
+        """
+        return self.index
+
     def __iter__(self: onehot) -> Iterable[int]:
         """
         Yield the individual entries of the one-hot vector that this instance
@@ -41,16 +51,6 @@ class onehot:
         """
         for i in range(self.size):
             yield 1 if i == self.index else 0
-
-    def __int__(self: onehot):
-        """
-        Return the index of the sole `1` entry in the one-hot vector
-        that this instance represents.
-
-        >>> int(onehot(3, 4))
-        3
-        """
-        return self.index
 
 class domain:
     """
@@ -65,27 +65,43 @@ class domain:
         self.components = [iterable]
         self.inverses = [{x: i for (i, x) in enumerate(iterable)}]
 
-    def __len__(self: domain) -> int:
-        size = 1
-        for component in self.components:
-            size *= len(component)
-        return size
-
     def __mul__(self: domain, other: domain) -> domain:
         """
         Combine two domains using the Cartesian product operation. This
         operation is associative.
 
-        >>> a = domain(['a', 'b', 'c'])
-        >>> b = domain(range(4))
+        >>> a = domain(['a', 'b'])
+        >>> b = domain(range(2))
         >>> c = a * b
-        >>> len(c)
-        12
+        >>> list(c)
+        [('a', 0), ('a', 1), ('b', 0), ('b', 1)]
         """
         d = domain([])
         d.components = self.components + other.components
         d.inverses = self.inverses + other.inverses
         return d
+
+    def __call__(self: domain, value: Any) -> onehot:
+        """
+        Retrieve the one-hot vector that represents the specified value in this
+        domain.
+
+        >>> a = domain(['a', 'b', 'c'])
+        >>> b = domain(range(4))
+        >>> c = a * b
+        >>> list(c(('b', 2)))
+        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+        """
+        if len(self.components) == 1:
+            return self.inverses[0][value]
+
+        index = 0
+        factor = 1
+        for (x, inv) in reversed(list(zip(value, self.inverses))):
+            index += factor * inv[x]
+            factor *= len(inv)
+
+        return onehot(index, len(self))
 
     def __getitem__(self: domain, index: Union[int, onehot]) -> Any:
         """
@@ -110,27 +126,31 @@ class domain:
         components = tuple(reversed(components))
         return components[0] if len(self.components) == 1 else components
 
-    def __call__(self: domain, value: Any) -> onehot:
+    def __iter__(self: domain) -> Iterable:
         """
-        Retrieve the one-hot vector that represents the specified value in this
-        domain.
+        Yield the individual elements of this domain.
+
+        >>> list(domain(['a', 'b', 'c']))
+        ['a', 'b', 'c']
+        """
+        for i in range(len(self)):
+            yield self[i]
+
+    def __len__(self: domain) -> int:
+        """
+        Return the size of this domain.
 
         >>> a = domain(['a', 'b', 'c'])
         >>> b = domain(range(4))
         >>> c = a * b
-        >>> list(c(('b', 2)))
-        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+        >>> len(c)
+        12
         """
-        if len(self.components) == 1:
-            return self.inverses[0][value]
+        size = 1
+        for component in self.components:
+            size *= len(component)
 
-        index = 0
-        factor = 1
-        for (x, inv) in reversed(list(zip(value, self.inverses))):
-            index += factor * inv[x]
-            factor *= len(inv)
-
-        return onehot(index, len(self))
+        return size
 
 class matrix:
     """
