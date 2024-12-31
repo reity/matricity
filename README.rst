@@ -22,6 +22,10 @@ Embedded domain-specific library for implicitly and explicitly encoding function
    :target: https://coveralls.io/github/reity/matricity?branch=main
    :alt: Coveralls test coverage summary.
 
+Purpose
+-------
+This embedded domain-specific language (EDSL) makes it possible to define domains of values that can be automatically converted to and from their `one-hot <https://en.wikipedia.org/wiki/One-hot>`__ vector representations and to use any appropriately annotated function as a `binary matrix <https://en.wikipedia.org/wiki/Binary_matrix>`__ that can be applied to a one-hot vector representation of a value. Additional background information and examples can be found in a `relevant report <https://eprint.iacr.org/2024/2088>`__.
+
 Installation and Usage
 ----------------------
 This library is available as a `package on PyPI <https://pypi.org/project/matricity>`__:
